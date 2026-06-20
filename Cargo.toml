@@ -1,0 +1,23 @@
+[package]
+name = "video-process-manager"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[dependencies]
+anyhow = "1"
+directories = "5"
+serde = { version = "1", features = ["derive"] }
+slint = { version = "1", default-features = false, features = ["compat-1-2", "std", "backend-winit", "renderer-software"] }
+sysinfo = "0.30"
+toml = "0.8"
+
+[build-dependencies]
+slint-build = "1"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

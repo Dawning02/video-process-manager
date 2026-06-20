@@ -1,0 +1,280 @@
+import { Button, CheckBox, LineEdit, ListView, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+component TransparentNameButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> is_group;
+    callback clicked;
+
+    width: 230px;
+    height: 28px;
+    background: touch-area.has-hover ? #eef3f8 : transparent;
+
+    Text {
+        x: root.is_group ? 0px : 24px;
+        y: 5px;
+        text: root.text;
+        color: root.is_group ? #222222 : #555555;
+        font-weight: root.is_group ? 600 : 400;
+    }
+
+    touch-area := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+export struct ProcessRow {
+    app_name: string,
+    process_name: string,
+    pid_text: string,
+    summary_text: string,
+    name_text: string,
+    row_type_text: string,
+    cpu_text: string,
+    memory_text: string,
+    status_text: string,
+    expand_text: string,
+    pid: int,
+    source_index: int,
+    selected: bool,
+    is_group: bool,
+    expanded: bool,
+}
+
+export struct AppRow {
+    app_name: string,
+    process_names_text: string,
+    preset: bool,
+}
+
+export component MainWindow inherits Window {
+    title: "视频应用进程管理工具";
+    width: 780px;
+    height: 620px;
+
+    in-out property <[ProcessRow]> process_rows;
+    in-out property <[AppRow]> app_rows;
+    in-out property <string> status_text: "点击“搜索进程”开始检测";
+    in-out property <string> custom_app_name;
+    in-out property <string> custom_process_names;
+    in-out property <bool> custom_page_visible;
+
+    callback search_processes();
+    callback close_selected();
+    callback add_custom_app(string, string);
+    callback delete_custom_app(int);
+    callback toggle_process_selection(int, bool);
+    callback toggle_process_group(int);
+    callback select_all_processes();
+    callback invert_process_selection();
+    callback show_custom_page();
+    callback show_main_page();
+    callback open_config_file();
+    callback reload_config();
+
+    VerticalBox {
+        padding: 16px;
+        spacing: 12px;
+
+        Text {
+            text: "视频应用进程管理工具";
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        if !root.custom_page_visible: VerticalBox {
+            spacing: 12px;
+
+            HorizontalBox {
+                spacing: 8px;
+                Button {
+                    text: "搜索进程";
+                    clicked => { root.search_processes(); }
+                }
+                Button {
+                    text: "一键关闭";
+                    clicked => { root.close_selected(); }
+                }
+                Button {
+                    text: "自定义应用";
+                    clicked => { root.show_custom_page(); }
+                }
+            }
+
+            HorizontalBox {
+                spacing: 8px;
+                Text {
+                    text: "搜索结果";
+                    font-size: 16px;
+                    font-weight: 600;
+                    width: 510px;
+                }
+                Button {
+                    text: "全选";
+                    clicked => { root.select_all_processes(); }
+                }
+                Button {
+                    text: "反选";
+                    clicked => { root.invert_process_selection(); }
+                }
+            }
+
+            HorizontalBox {
+                spacing: 8px;
+                Text { text: ""; width: 28px; }
+                Text {
+                    text: "名称";
+                    width: 230px;
+                    font-weight: 700;
+                    color: #444444;
+                }
+                Text {
+                    text: "类型";
+                    width: 70px;
+                    font-weight: 700;
+                    color: #444444;
+                }
+                Text {
+                    text: "PID";
+                    width: 70px;
+                    font-weight: 700;
+                    color: #444444;
+                }
+                Text {
+                    text: "CPU";
+                    width: 70px;
+                    font-weight: 700;
+                    color: #444444;
+                }
+                Text {
+                    text: "内存";
+                    width: 90px;
+                    font-weight: 700;
+                    color: #444444;
+                }
+                Text {
+                    text: "状态";
+                    width: 110px;
+                    font-weight: 700;
+                    color: #444444;
+                }
+            }
+
+            ListView {
+                height: 400px;
+                for row[index] in root.process_rows: HorizontalBox {
+                    spacing: 8px;
+                    CheckBox {
+                        checked: row.selected;
+                        width: 28px;
+                        toggled => { root.toggle_process_selection(index, self.checked); }
+                    }
+                    TransparentNameButton {
+                        text: row.is_group ? row.expand_text + " " + row.name_text : row.name_text;
+                        is_group: row.is_group;
+                        clicked => { root.toggle_process_group(index); }
+                    }
+                    Text {
+                        text: row.row_type_text;
+                        width: 70px;
+                        color: row.is_group ? #333333 : #666666;
+                    }
+                    Text {
+                        text: row.pid_text;
+                        width: 70px;
+                        color: #666666;
+                    }
+                    Text {
+                        text: row.cpu_text;
+                        width: 70px;
+                        color: #666666;
+                    }
+                    Text {
+                        text: row.memory_text;
+                        width: 90px;
+                        color: #666666;
+                    }
+                    Text {
+                        text: row.status_text;
+                        width: 110px;
+                        color: #666666;
+                    }
+                }
+            }
+
+            Text {
+                text: root.status_text;
+                color: #555555;
+            }
+        }
+
+        if root.custom_page_visible: VerticalBox {
+            spacing: 12px;
+
+            HorizontalBox {
+                spacing: 8px;
+                Text {
+                    text: "自定义应用管理";
+                    font-size: 18px;
+                    font-weight: 600;
+                    width: 520px;
+                }
+                Button {
+                    text: "返回";
+                    clicked => { root.show_main_page(); }
+                }
+            }
+
+            LineEdit {
+                placeholder-text: "应用名称，例如 测试应用";
+                text <=> root.custom_app_name;
+            }
+
+            LineEdit {
+                placeholder-text: "进程名，可用逗号或换行分隔，例如 notepad.exe, helper.exe";
+                text <=> root.custom_process_names;
+            }
+
+            HorizontalBox {
+                spacing: 8px;
+                Button {
+                    text: "添加";
+                    clicked => {
+                        root.add_custom_app(root.custom_app_name, root.custom_process_names);
+                    }
+                }
+                Button {
+                    text: "打开配置文件";
+                    clicked => { root.open_config_file(); }
+                }
+                Button {
+                    text: "重新加载配置";
+                    clicked => { root.reload_config(); }
+                }
+            }
+
+            ListView {
+                height: 300px;
+                for app[index] in root.app_rows: HorizontalBox {
+                    spacing: 8px;
+                    Text { text: app.app_name; width: 160px; }
+                    Text { text: app.process_names_text; width: 300px; color: #555555; }
+                    Text {
+                        text: app.preset ? "预设" : "自定义";
+                        width: 70px;
+                        color: app.preset ? #777777 : #246b35;
+                    }
+                    Button {
+                        text: "删除";
+                        enabled: !app.preset;
+                        clicked => { root.delete_custom_app(index); }
+                    }
+                }
+            }
+
+            Text {
+                text: root.status_text;
+                color: #555555;
+            }
+        }
+    }
+}

@@ -1,0 +1,23 @@
+[[preset_apps]]
+app_name = "腾讯视频"
+process_names = ["QQLive.exe"]
+
+[[preset_apps]]
+app_name = "爱奇艺"
+process_names = ["QyClient.exe"]
+
+[[preset_apps]]
+app_name = "芒果TV"
+process_names = ["MangoTV.exe", "mgtv.exe"]
+
+[[preset_apps]]
+app_name = "优酷"
+process_names = ["YoukuDesktop.exe"]
+
+[[preset_apps]]
+app_name = "哔哩哔哩"
+process_names = ["bilibili.exe"]
+
+[[preset_apps]]
+app_name = "抖音"
+process_names = ["douyin.exe"]
