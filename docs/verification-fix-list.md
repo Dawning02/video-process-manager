@@ -7,12 +7,14 @@
 - `cargo check` 已通过。
 - `cargo test` 已通过：8 个单元测试全部成功。
 - `Cargo.lock` 已生成，后续应纳入版本管理。
-- 自定义应用配置已改为 TOML：`config.toml`。
+- 自定义应用配置已改为 TOML：程序所在目录下的 `config.toml`。
 - 自定义应用已支持一个应用配置多个进程名。
 - 主界面已新增搜索结果 `全选` / `反选`。
 - 自定义应用管理已调整为独立页面。
 - 搜索结果已调整为任务管理器式表格展示，支持按应用折叠/展开子进程，并显示 CPU/内存。
+- 应用窗口已支持拖拽调整大小和系统最大化，列表区域会随窗口高度伸缩。
 - 已新增预设进程配置文件 `presets.toml`，并为后续联网更新预留用户配置目录覆盖机制。
+- 打包计划已验证：先生成绿色版，再通过 Inno Setup 封装安装包；当前本机未检测到 Inno Setup。
 
 ## 已解决项
 
@@ -34,12 +36,13 @@
 
 5. TOML 配置与多进程名
    - 状态：已实现。
-   - 结果：配置文件路径改为 `config.toml`，格式为 `[[custom_apps]] app_name = "..."; process_names = ["..."]`。
+   - 结果：配置文件路径改为程序所在目录下的 `config.toml`，格式为 `[[custom_apps]] app_name = "..."; process_names = ["..."]`。
+   - 说明：读取时优先使用 exe 所在目录 `config.toml`；不存在时兼容读取当前工作目录和旧用户配置目录；保存时固定写入 exe 所在目录，便于和 `presets.toml`、`.exe` 一起分发。
 
 5.1 预设 TOML 配置
    - 状态：已实现。
    - 结果：新增 `presets.toml`，格式为 `[[preset_apps]] app_name = "..."; process_names = ["..."]`。
-   - 说明：启动时优先读取用户配置目录下的 `presets.toml`，不存在时读取程序当前目录/仓库根目录的 `presets.toml`，失败时回退代码内置预设并提示；芒果TV 预设已包含 `MangoTV.exe` 和 `mgtv.exe`。
+   - 说明：启动时优先读取用户配置目录下的 `presets.toml`，不存在时读取 exe 所在目录，再读取当前工作目录，失败时回退代码内置预设并提示；芒果TV 预设已包含 `MangoTV.exe` 和 `mgtv.exe`。
 
 6. 自定义应用页面形态与需求差异
    - 状态：已实现。
@@ -58,6 +61,16 @@
    - 结果：搜索结果按应用名分组，表头包含名称、类型、PID、CPU、内存、状态；多进程应用在名称列显示 `> 应用名（数量）`，单进程应用显示 `> 应用名`；子进程行缩进展示并显示具体 PID、CPU、内存。
    - 说明：应用名称使用透明可点击区域，点击名称可展开/收起子进程；勾选应用行会同步选择该应用下全部子进程；重新搜索会清空勾选状态，但保留已展开应用；配置重载会清空搜索结果和展开状态。
 
+10. 窗口大小可调整与最大化
+   - 状态：已实现，待运行窗口验收。
+   - 结果：主窗口使用首选尺寸启动，保留系统窗口可调整/最大化能力；搜索结果列表和自定义应用列表会随窗口高度伸缩。
+   - 验证：执行 `cargo run`，拖拽窗口边缘放大/缩小并点击系统最大化按钮，确认列表区域跟随变化且按钮、状态栏不重叠。
+
+11. Windows 绿色版与安装包计划
+   - 状态：绿色版脚本和 Inno Setup 脚本已新增，安装包编译待安装 Inno Setup 后验证。
+   - 结果：`scripts/build-portable.ps1` 用于生成 `dist/VideoProcessManager/`；`installer/video-process-manager.iss` 用于生成 `dist/VideoProcessManagerSetup-0.1.0.exe`。
+   - 说明：安装目录默认 `{localappdata}\VideoProcessManager`，避免 `Program Files` 写入权限问题；当前未做代码签名，Windows 可能提示未知发布者。
+
 ## 高优先级待验证
 
 1. 自定义应用页面运行效果
@@ -68,7 +81,7 @@
 2. TOML 配置手动编辑流程
    - 位置：`src/config.rs`、`src/main.rs`
    - 问题：读写和解析已通过单元测试，但尚未手动验证“打开配置文件 -> 编辑 -> 重新加载配置”流程。
-   - 验证：添加 `测试应用 / notepad.exe`，打开并编辑 `config.toml`，点击重新加载确认列表刷新。
+   - 验证：添加 `测试应用 / notepad.exe`，确认 exe 所在目录生成 `config.toml`；打开并编辑 `config.toml`，点击重新加载确认列表刷新。
 
 2.1 预设 TOML 加载流程
    - 位置：`presets.toml`、`src/config.rs`
@@ -80,11 +93,26 @@
    - 问题：分组构建、选择逻辑、CPU/内存汇总将通过自动测试验证，但尚未实际打开窗口检查列宽、点击区域和数值展示。
    - 验证：启动至少两个目标进程，搜索后确认显示任务管理器式表头；多进程应用名称显示 `应用名（数量）`，单进程不显示 `（1）`；点击透明名称区域可展开/收起；子进程行缩进并显示 PID、CPU、内存；勾选应用行能批量选择子进程；单独勾选子进程后分组显示 `已选 X/Y`；重新搜索后展开状态保留且勾选清空。
 
+3.1 窗口缩放与最大化交互
+   - 位置：`ui/main.slint`
+   - 问题：已通过编译，但尚未实际拖拽窗口检查不同尺寸下的视觉效果。
+   - 验证：拖拽窗口放大和缩小，点击系统最大化/还原按钮，确认搜索结果列表、自定义应用列表随高度伸缩，文本和按钮不重叠。
+
 4. mgtv.exe 一键关闭失败复测
    - 位置：`src/process.rs`
    - 问题：芒果 TV 等客户端可能无法通过 `sysinfo::Process::kill()` 普通关闭。
    - 修复：关闭前仍校验 PID + 进程名；校验通过后优先普通关闭，失败时 Windows 使用 `taskkill /PID <pid> /T /F` 强制关闭进程树。
    - 验证：自定义应用添加 `mgtv.exe`，启动芒果 TV 后搜索、勾选应用行或子进程行并点击一键关闭；确认主进程和相关子进程退出，状态栏不再显示关闭失败。
+
+5. 绿色版分发验收
+   - 位置：`scripts/build-portable.ps1`
+   - 问题：脚本已创建，需实际构建并在 `dist/VideoProcessManager/` 中双击 exe 验证。
+   - 验证：执行 `.\scripts\build-portable.ps1`；确认输出目录包含 exe、`presets.toml`、`config.toml`；双击 exe 能启动；添加自定义应用后同目录 `config.toml` 更新。
+
+6. Inno Setup 安装包验收
+   - 位置：`installer/video-process-manager.iss`
+   - 问题：当前本机未检测到 Inno Setup，安装包编译需安装 Inno Setup 后执行。
+   - 验证：先生成绿色版，再执行 `iscc .\installer\video-process-manager.iss`；安装后确认桌面/开始菜单快捷方式、配置写入和卸载流程。
 
 ## 中优先级优化
 
@@ -127,8 +155,11 @@
 1. 执行 `cargo run`，验证窗口能启动，记录任何 UI 或运行时错误。
 2. 用记事本等无害进程做手动验收：添加自定义应用、搜索、全选、反选、一键关闭、刷新结果。
 3. 验证搜索结果任务管理器式展示：表头列、透明名称点击区、应用名数量显示、子进程缩进、CPU/内存列、应用行批量选择、子进程单选、刷新后展开状态保留。
-4. 复测 `mgtv.exe` 一键关闭，确认 Windows `taskkill` 兜底能关闭芒果 TV 进程树。
-5. 手动编辑 `config.toml` 后点击 `重新加载配置`，验证 TOML 批量维护流程。
-6. 编辑 `presets.toml`，验证预设应用可通过文件更新；后续联网更新可写入用户配置目录的 `presets.toml`。
-7. 校准六个预设视频应用的真实进程名。
-8. 执行 `cargo build --release`，记录实际 Windows `.exe` 体积并更新构建文档。
+4. 验证窗口大小调整和最大化：放大/缩小/最大化主界面和自定义页面，确认列表伸缩和内容不重叠。
+5. 复测 `mgtv.exe` 一键关闭，确认 Windows `taskkill` 兜底能关闭芒果 TV 进程树。
+6. 手动编辑程序所在目录下的 `config.toml` 后点击 `重新加载配置`，验证 TOML 批量维护流程。
+7. 执行 `.\scripts\build-portable.ps1`，验证绿色版目录和双击运行。
+8. 安装 Inno Setup 后执行 `iscc .\installer\video-process-manager.iss`，验证安装包。
+9. 编辑 `presets.toml`，验证预设应用可通过文件更新；后续联网更新可写入用户配置目录的 `presets.toml`。
+10. 校准六个预设视频应用的真实进程名。
+11. 执行 `cargo build --release`，记录实际 Windows `.exe` 体积并更新构建文档。

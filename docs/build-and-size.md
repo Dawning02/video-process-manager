@@ -31,7 +31,7 @@ cargo build --release
 
 ## 自定义配置文件
 
-自定义应用保存为系统用户配置目录下的 `config.toml`。配置示例：
+自定义应用保存为程序所在目录下的 `config.toml`，建议与 `video-process-manager.exe`、`presets.toml` 放在同一文件夹。旧版本保存在用户配置目录下的 `config.toml` 仍可兼容读取，但新的保存位置固定为程序所在目录。配置示例：
 
 ```toml
 [[custom_apps]]
@@ -39,7 +39,7 @@ app_name = "测试应用"
 process_names = ["notepad.exe", "helper.exe"]
 ```
 
-预设应用仍由程序内置，TOML 文件只保存用户自定义应用。
+`config.toml` 只保存用户自定义应用，不保存预设应用。
 
 ## 预设配置文件
 
@@ -77,3 +77,36 @@ strip = true
   - Universal Binary：约 10-25 MB。
 
 实际体积会受 Slint 渲染后端、图标/图片/字体资源、签名元数据和目标架构影响。当前项目使用软件渲染后端，并避免大型资源和 WebView。
+
+## Windows 分发流程
+
+推荐先生成绿色版，再封装安装包。
+
+绿色版：
+
+```powershell
+.\scripts\build-portable.ps1
+```
+
+输出：
+
+```text
+dist/VideoProcessManager/
+  video-process-manager.exe
+  presets.toml
+  config.toml
+```
+
+安装包：
+
+```powershell
+iscc .\installer\video-process-manager.iss
+```
+
+输出：
+
+```text
+dist/VideoProcessManagerSetup-0.1.0.exe
+```
+
+安装包依赖 Inno Setup。当前未配置代码签名，安装时可能显示“未知发布者”。

@@ -48,8 +48,8 @@ export struct AppRow {
 
 export component MainWindow inherits Window {
     title: "视频应用进程管理工具";
-    width: 780px;
-    height: 620px;
+    preferred-width: 780px;
+    preferred-height: 620px;
 
     in-out property <[ProcessRow]> process_rows;
     in-out property <[AppRow]> app_rows;
@@ -160,7 +160,7 @@ export component MainWindow inherits Window {
             }
 
             ListView {
-                height: 400px;
+                vertical-stretch: 1;
                 for row[index] in root.process_rows: HorizontalBox {
                     spacing: 8px;
                     CheckBox {
@@ -253,7 +253,7 @@ export component MainWindow inherits Window {
             }
 
             ListView {
-                height: 300px;
+                vertical-stretch: 1;
                 for app[index] in root.app_rows: HorizontalBox {
                     spacing: 8px;
                     Text { text: app.app_name; width: 160px; }

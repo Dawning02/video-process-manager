@@ -1,7 +1,4 @@
-use std::{
-    fs,
-    path::PathBuf,
-};
+use std::{env, fs, path::PathBuf};
 
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
@@ -63,7 +60,7 @@ fn builtin_preset_apps() -> Vec<AppEntry> {
 }
 
 pub fn load_custom_apps() -> anyhow::Result<Vec<AppEntry>> {
-    let path = config_path()?;
+    let path = resolve_config_path()?;
     if !path.exists() {
         return Ok(Vec::new());
     }
@@ -177,13 +174,44 @@ fn preset(app_name: &str, process_names: &[&str]) -> AppEntry {
 }
 
 pub fn config_path() -> anyhow::Result<PathBuf> {
+    Ok(exe_dir()?.join("config.toml"))
+}
+
+pub fn local_config_path() -> PathBuf {
+    PathBuf::from("config.toml")
+}
+
+pub fn user_config_path() -> anyhow::Result<PathBuf> {
     let dirs = ProjectDirs::from("com", "video-tools", "VideoProcessManager")
         .ok_or_else(|| anyhow::anyhow!("无法定位用户配置目录"))?;
     Ok(dirs.config_dir().join("config.toml"))
 }
 
+fn resolve_config_path() -> anyhow::Result<PathBuf> {
+    let exe_path = config_path()?;
+    if exe_path.exists() {
+        return Ok(exe_path);
+    }
+
+    let working_path = local_config_path();
+    if working_path.exists() {
+        return Ok(working_path);
+    }
+
+    let user_path = user_config_path()?;
+    if user_path.exists() {
+        return Ok(user_path);
+    }
+
+    Ok(exe_path)
+}
+
 pub fn presets_path() -> PathBuf {
     PathBuf::from("presets.toml")
+}
+
+pub fn exe_presets_path() -> anyhow::Result<PathBuf> {
+    Ok(exe_dir()?.join("presets.toml"))
 }
 
 pub fn user_presets_path() -> anyhow::Result<PathBuf> {
@@ -198,17 +226,34 @@ fn resolve_presets_path() -> anyhow::Result<PathBuf> {
         return Ok(user_path);
     }
 
-    let local_path = presets_path();
-    if local_path.exists() {
-        return Ok(local_path);
+    let exe_path = exe_presets_path()?;
+    if exe_path.exists() {
+        return Ok(exe_path);
+    }
+
+    let working_path = presets_path();
+    if working_path.exists() {
+        return Ok(working_path);
     }
 
     Ok(user_path)
 }
 
+fn exe_dir() -> anyhow::Result<PathBuf> {
+    let exe = env::current_exe()?;
+    let parent = exe
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("无法定位程序所在目录"))?;
+    Ok(parent.to_path_buf())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn path_file_name(path: &std::path::Path) -> Option<&str> {
+        path.file_name().and_then(|name| name.to_str())
+    }
 
     #[test]
     fn rejects_empty_custom_app_fields() {
@@ -286,6 +331,27 @@ mod tests {
         assert_eq!(
             config.preset_apps[0].process_names,
             vec!["example.exe", "helper.exe"]
+        );
+    }
+
+    #[test]
+    fn config_path_defaults_to_local_file() {
+        assert_eq!(
+            path_file_name(&config_path().unwrap()),
+            Some("config.toml")
+        );
+    }
+
+    #[test]
+    fn local_config_path_uses_packaged_directory() {
+        assert_eq!(local_config_path(), PathBuf::from("config.toml"));
+    }
+
+    #[test]
+    fn exe_presets_path_uses_presets_file_name() {
+        assert_eq!(
+            path_file_name(&exe_presets_path().unwrap()),
+            Some("presets.toml")
         );
     }
 }

@@ -8,6 +8,7 @@
 - 支持自定义应用和多个进程名，例如 `notepad.exe, helper.exe`。
 - 搜索结果按应用分组展示，支持展开查看子进程。
 - 任务管理器式列表展示：名称、类型、PID、CPU、内存、状态。
+- 应用窗口支持拖拽调整大小和系统最大化，搜索结果和自定义应用列表会随窗口伸缩。
 - 支持单选、应用分组批量选择、全选、反选和一键关闭。
 - Windows 下普通关闭失败时，会在校验 PID + 进程名后使用 `taskkill /PID /T /F` 兜底。
 - 预设配置和自定义配置均使用 TOML，方便手动维护和后续联网更新。
@@ -40,7 +41,7 @@ cargo build --release
 
 ### 自定义应用
 
-自定义应用保存在系统用户配置目录下的 `config.toml`，程序内可通过“打开配置文件”访问。
+自定义应用保存在程序所在目录的 `config.toml`，建议和 `video-process-manager.exe`、`presets.toml` 放在同一文件夹。程序内可通过“打开配置文件”访问。
 
 ```toml
 [[custom_apps]]
@@ -63,6 +64,61 @@ process_names = ["MangoTV.exe", "mgtv.exe"]
 ```
 
 后续如果加入联网更新，可下载同格式 TOML 到用户配置目录并替换 `presets.toml`。
+
+### 分发目录建议
+
+```text
+视频应用进程管理工具/
+  video-process-manager.exe
+  presets.toml
+  config.toml
+```
+
+`config.toml` 可以没有，首次添加自定义应用时程序会自动创建。旧版本保存在用户配置目录的 `config.toml` 仍可被兼容读取，但新的保存位置固定为程序所在目录。
+
+## 打包分发
+
+### 绿色版
+
+绿色版适合先验证程序在没有 Rust 环境的电脑上能否直接运行：
+
+```powershell
+.\scripts\build-portable.ps1
+```
+
+输出目录：
+
+```text
+dist/VideoProcessManager/
+  video-process-manager.exe
+  presets.toml
+  config.toml
+```
+
+将整个 `VideoProcessManager` 文件夹复制到其他电脑，双击 `video-process-manager.exe` 即可运行。
+
+### Inno Setup 安装包
+
+安装 Inno Setup 后，先生成绿色版，再编译安装脚本：
+
+```powershell
+.\scripts\build-portable.ps1
+iscc .\installer\video-process-manager.iss
+```
+
+输出文件：
+
+```text
+dist/VideoProcessManagerSetup-0.1.0.exe
+```
+
+安装包默认安装到：
+
+```text
+%LOCALAPPDATA%\VideoProcessManager
+```
+
+这样普通用户可以写入同目录的 `config.toml`。当前未做代码签名，Windows 可能提示“未知发布者”。
 
 ## 项目结构
 
